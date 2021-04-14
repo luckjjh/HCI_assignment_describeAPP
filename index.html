@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2016742039 정정현</title>
+    <style>
+        body{
+            background:#ffffff;/*배경 색상*/
+        }
+        input{
+            margin: 10px;
+            width: 200px;
+            height: 20px;
+            font-size: 20px;
+        }
+        input[type=text]{
+            border: 5px solid skyblue;
+            border-radius: 5px;
+        }
+        #textStyle{
+            margin: 10px;
+            font-size: 20pt;
+        }
+        #explainTextStyle{
+            margin: 10px;
+            font-size: 15pt;
+        }
+        #chat_textStyle{
+            margin: 10px;
+            font-size: 13pt;
+        }
+        #canvas{
+            margin: 10px;
+            padding: 10px;
+            background: #ffffff;
+            border:thin inset #000000;/*태두리*/
+        }
+        #previous_btn{
+            margin: 10px;
+            margin-right: 940px;/*우측 버튼과 거리 조절*/
+            border-top-left-radius: 5px;
+            border-bottom-left-radius: 5px;
+            border-top-right-radius: 5px;
+            border-bottom-right-radius: 5px;/*버튼 둥글게 각도 조정*/
+        }
+        #next_btn{
+            border-top-left-radius: 5px;
+            border-bottom-left-radius: 5px;
+            border-top-right-radius: 5px;
+            border-bottom-right-radius: 5px;
+        }
+        #btn_style button{/*canvas UI 바꾸는 버튼*/
+            border:1px solid rgb(20, 49, 211);
+            color: rgb(20, 49, 211);
+            background-color: rgb(0,0,0,0);
+            font-size: 30px;
+            padding: 10px;
+        }
+        #btn_style button:hover{/*버튼에 마우스 올라갔을때 변화*/
+            color:white;
+            background-color: rgb(20, 49, 211);
+        }
+        .chat_main_layout{
+            width: 1000px;
+            height: 50px;
+        }
+        .head_layout{
+            display: inline-block;
+            width: 350px;
+            height: 10px;
+        }
+        
+    </style>
+</head>
+<body>
+    <h1 id='textStyle'>2016742039 정정현 과제 #1. HTML Canvas</h1>
+    <div class="chat_main_layout">
+    <div class="head_layout">
+    <form method="post">
+        <p id='chat_textStyle'>채팅 입력 : <input type="text" maxlength='10' id = "chatting" value=""/></p>
+    </form></div>
+    <div class="head_layout"><button id="send_btn" onclick="chat_btn_click();" >채팅전송</button>
+    </div>
+    </div>
+    <canvas id='canvas' width='1140' height='540'>
+        Canvas not Supported
+    </canvas>
+
+    <div id="btn_style">
+        <button id="previous_btn" onclick="previous_btn_click();">previous</button> 
+        <button id="next_btn" onclick="next_btn_click();">next</button>
+    </div>
+    <div>
+        <h1 id='explainTextStyle' style="color:red">###화면 전환 입력 방식###</h1>
+        <h1 id='explainTextStyle' style="color:blue">previous 버튼과 next 버튼을 통해 canvas를 한칸씩 전환하거나,</h1>
+        <h1 id='explainTextStyle' style="color:blue">숫자키 '1', '2', '3'을 통해 canvas를 전환할 수 있습니다.</h1>
+        <h1 id='explainTextStyle'>###채팅 입력 관한 설명### : "안녕", "만든사람", "시작할까?",등... 의 text를 입력하고 채팅전송 버튼을 누르면 화면 채팅창에서 대화형 상호작용이 가능합니다.(Enter키로는 텍스트 입력이 불가합니다.)</h1>
+    </div>
+    
+    <script>
+        var canvas = document.getElementById('canvas'),
+            context = canvas.getContext('2d'),
+            count = 1;
+        
+        function create_circle(x,y,size,line_width){
+            context.lineWidth = line_width;
+            context.beginPath();
+            context.arc(x,y,size,0,Math.PI*2);
+            context.stroke();
+            context.fill();
+        };/*원 그리기 func*/
+
+        function create_bezierCurve(stk_style,end_point,control_point,choosefill){
+            context.strokeStyle = stk_style;
+            context.fillStyle = stk_style;
+            context.beginPath();
+            context.moveTo(end_point[0].x,end_point[0].y);
+            context.bezierCurveTo(control_point[0].x,control_point[0].y
+                                ,control_point[1].x,control_point[1].y
+                                ,end_point[1].x,end_point[1].y);
+            context.stroke();
+            if(choosefill==1){
+                context.fill();
+            }
+        };/*베지어 곡선 그리기 func*/
+        function create_Image(img,x,y,w,h){
+            img.onload=function(e){
+                context.drawImage(img,x,y,w,h);
+            }
+        };/*비트맵 이미지*/
+        function sleep(ms) {/*딜레이 주는 함수 1000ms = 1sec*/
+            return new Promise((r) => setTimeout(r, ms))
+        }
+        var ChattingBox = function(x,y,font,chat){/*채팅 객체 생성자 함수*/
+            this.x=x;
+            this.y=y;
+            this.font=font;
+            this.chat=chat;
+        };
+
+        ChattingBox.prototype = {
+            sendChat:function(context){
+                context.fillStyle = 'white';
+                context.font = this.font;
+                context.textAlign='center';
+                context.fillText(this.chat,this.x,this.y);
+            },
+            removeChat:function(context){
+                if(count==1){
+                    context.fillStyle = '#786F68';
+                    context.strokeStyle = 'black';
+                    context.fillRect(125,400,200,50);
+                    context.strokeRect(75,400,250,50);
+                }
+                else if(count==3){
+                    context.lineWidth=4
+                    context.fillStyle = '#233C65';
+                    context.strokeStyle = 'black';
+                    context.fillRect(190,470,200,50);
+                    context.strokeRect(140,470,250,50);
+                }
+            },
+            responseChat:function(context){
+                var inputChat=document.getElementById("chatting").value;
+                if(inputChat=="안녕"||inputChat=="hi"||inputChat=="hello"
+                ||inputChat=="안녕하세요"||inputChat=="ㅎㅇ"){
+                    this.chat = "하이하이"
+                    this.removeChat(context)
+                    this.sendChat(context)
+                }
+                else if(inputChat=="게임 이름이 뭐야?"||inputChat=="게임 이름"||
+                inputChat=="이 게임 뭐야?"||inputChat=="게임 이름 뭐야?"){
+                    this.chat = "카트라이더 러쉬";
+                    this.removeChat(context);
+                    this.sendChat(context);
+                }
+                else if(inputChat=="개발자가 누구야?"||inputChat=="누가 만들었어?"
+                ||inputChat=="개발자"||inputChat=="만든사람"){
+                    this.chat = "정정현";
+                    this.removeChat(context);
+                    this.sendChat(context);
+                }
+                else if(inputChat=="시작할까?"||inputChat=="빨리 준비해"||inputChat=="ㄹㄷㄹㄷ"){
+                    this.chat = "ㅇㅋㅇㅋ";
+                    this.removeChat(context);
+                    this.sendChat(context);
+                }
+                else{
+                    this.chat = "뭐라고 하는거야?";
+                    this.removeChat(context);
+                    this.sendChat(context);
+                }
+            }
+        };
+
+        var Point = function(x,y){
+            this.x=x;
+            this.y=y;
+        };
+        var Polygon = function(centerX,centerY,radius,sides,startAngle,strokeStyle,fillStyle){
+            this.x = centerX;
+            this.y = centerY;
+            this.radius = radius;
+            this.sides = sides;
+            this.startAngle = startAngle;
+            this.strokeStyle = strokeStyle;
+            this.fillStyle = fillStyle;
+        };
+        
+        Polygon.prototype = {
+            getPoints:function(){
+                var points = [],
+                    angle = this.startAngle || 0;
+                for(var j = 0; j < this.sides; ++j){
+                    points.push(new Point(this.x+ this.radius*Math.sin(angle),
+                                            this.y-this.radius*Math.cos(angle)));
+                    angle+=2*Math.PI/this.sides;
+                    }
+                return points;
+            },
+            createPath:function(context){
+                var points = this.getPoints();
+                context.beginPath();
+                context.moveTo(points[0].x,points[0].y);
+                for(var k=1;k<this.sides;++k){
+                    context.lineTo(points[k].x,points[k].y);
+                }
+                context.closePath();
+            },
+            stroke:function(context){
+                context.save();
+                this.createPath(context);
+                context.strokeStyle=this.strokeStyle;
+                context.stroke();
+                context.restore();
+            },
+            fill:function(context){
+                context.save();
+                this.createPath(context);
+                context.fillStyle = this.fillStyle;
+                context.fill();
+                context.restore();
+            },
+            move:function(x,y){
+                this.x=x;
+                this.y=y;
+            }
+        };
+        
+        function drawPolygon(polygon){
+            context.beginPath();
+            polygon.createPath(context);
+            polygon.stroke(context);
+            polygon.fill(context);
+        };
+        function create_canvas_main(){/*Canvas1*/
+            var background_color = context.createLinearGradient(0,0,0,canvas.height);
+            background_color.addColorStop(0.3,'#6D9AE2');/*배경 윗쪽 하늘*/
+            background_color.addColorStop(0.5,'#FDD3B2');/*배경 아래쪽 땅*/
+            context.fillStyle=background_color;
+            context.fillRect(0,0,canvas.width,canvas.height);
+            /*mainCanvas 배경 그라데이션으로 채우기*/
+
+            context.fillStyle = 'white';
+            context.strokeStyle ='white';
+            create_circle(800,100,50);
+            create_circle(850,100,50);
+            create_circle(750,100,50);
+            create_circle(825,80,50);
+            context.fillStyle = '#D3D9ED';
+            context.strokeStyle ='#D3D9ED';
+            create_circle(300,150,50);
+            create_circle(350,150,50);
+            create_circle(250,150,50);
+            create_circle(325,130,50);/*구름 표현*/
+
+            context.fillStyle = '#3C5B19';
+            context.strokeStyle = '#3C5B19';
+            create_circle(900,500,150);
+            create_circle(1100,350,100);
+            context.fillStyle = '#C4DE48';
+            context.strokeStyle = '#C4DE48';
+            create_circle(1000,400,100);
+            create_circle(1100,500,100);
+            
+            context.fillStyle = '#3C5B19';
+            create_circle(100,400,150);
+            create_circle(200,350,100);
+            context.fillStyle = '#C4DE48';
+            context.strokeStyle = '#C4DE48';
+            create_circle(200,500,150);
+            create_circle(0,500,100);
+
+            context.fillStyle = '#3E6282';
+            context.strokeStyle='black';
+            context.lineWidth = 5;
+            context.strokeRect(75,450,800,50);
+            context.fillRect(75,450,800,50);/*x,y,width,height*/
+            context.fillStyle = 'white';
+            context.font = '400 18pt Arial';
+            context.textAlign = 'start';
+            var down_menu_index = ["잠재력","  수련","  업적"," 소셜","  클럽","마이룸","퀘스트","  창고"],
+                index_count=0,
+                chat_img = new Image();
+            for(var i =175;i<800;i+=100){
+                context.lineWidth = 3;
+                context.strokeStyle='white';
+                context.beginPath();
+                context.moveTo(i,450);
+                context.lineTo(i,450+50);
+                context.stroke();
+                context.fillText(down_menu_index[index_count++],i-85,485);
+            }
+            context.fillText(down_menu_index[7],875-85,485);/*하단 메뉴 바&text*/
+
+            context.fillStyle = '#786F68';
+            context.strokeStyle = 'black';
+            context.fillRect(125,400,200,50);
+            context.strokeRect(75,400,250,50);
+            chat_img.src = 'resource/chatImg.png';
+            create_Image(chat_img,76,401,48,48);/*채팅창*/
+            context.fillStyle='#FFDF20';
+            context.strokeStyle='black';
+            context.strokeRect(900,450,150,50);
+            context.fillRect(900,450,150,50);
+            context.font = '700 20pt Arial';
+            context.fillStyle='#AA5905';
+            context.fillText("게임  시작",915,485);
+            /*게임 시작버튼*/
+
+            var user_profile_img=new Image();
+            user_profile_img.src='resource/userProfile.png';
+            context.lineJoin='round';
+            context.lineWidth='20';
+            context.strokeStyle='#2D8EE2';
+            context.strokeRect(75,20,50,50);
+            create_Image(user_profile_img,75,20,50,50);
+            context.font = '300 15pt Arial';
+            context.fillStyle = 'white';
+            context.fillText("꾼이><",140,30);
+            context.fillText("Lv. 23",140,65);
+            context.fillStyle='#14315A';
+            context.fillRect(140,35,120,10);
+            context.fillStyle='#F7EB35';
+            context.fillRect(140,35,100,10);
+            /*화면 좌측 상단 user 아이콘,경험치 바*/
+
+            var upper_menu_index = [" 스페셜","배틀로얄"," 카러플","챔피언스"],
+                index_count2=0,img_count=0,
+                upper_menu_img1 = new Image(),upper_menu_img2 = new Image(),
+                upper_menu_img3 = new Image(),upper_menu_img4 = new Image();
+            upper_menu_img1.src = 'resource/upperMenuImg1.png';
+            upper_menu_img2.src = 'resource/upperMenuImg2.png';
+            upper_menu_img3.src = 'resource/upperMenuImg3.png';
+            upper_menu_img4.src = 'resource/upperMenuImg4.png';
+
+            for(var circle_i=120;circle_i<320;circle_i+=65){
+                context.fillStyle='#6690D5';
+                context.strokeStyle='white';
+                create_circle(circle_i,110,25,5);
+                context.fillStyle='white';
+                context.strokeStyle='#6690D5';
+                context.font='400 10pt Arial';
+                context.fillText(upper_menu_index[index_count2++],circle_i-25,150);
+            }/*화면 상단 원 4개 메뉴*/
+            create_Image(upper_menu_img1,90,80,60,60);
+            create_Image(upper_menu_img2,155,80,60,60);
+            create_Image(upper_menu_img3,220,80,60,60);
+            create_Image(upper_menu_img4,285,80,60,60);
+            /*화면 상단 원 4개 메뉴 이미지*/
+
+            context.fillStyle = '#FFDC05';
+            create_circle(600,30,15,5);
+            context.fillStyle = 'white';
+            context.font = '400 15pt Arial';
+            context.fillText("23535",620,37);
+            var coin_img = new Image();
+            coin_img.src = 'resource/upperMenuImg2.png';
+            context.fillStyle = '#1882C5';
+            context.strokeStyle = '#CDDEF4';
+            create_circle(720,30,15,5);
+            context.fillStyle = 'white';
+            context.fillText("15010",740,37);
+            create_Image(coin_img,705,15,30,30);
+            context.fillStyle = '#CB25D5';
+            context.fillRect(820,15,30,30);
+            context.fillStyle = 'white';
+            context.fillText("0",860,37);
+            context.fillStyle='#CEE9FF';
+            create_circle(900,30,12,12,5);
+            context.strokeStyle = '#638A5D';
+            context.lineWidth=3;
+            context.beginPath();
+            context.moveTo(890,30);
+            context.lineTo(910,30);
+            context.stroke();
+            context.beginPath();
+            context.moveTo(900,20);
+            context.lineTo(900,40);
+            context.stroke();
+            context.strokeStyle = '#C2E4FC';
+            context.fillRect(950,15,15,15);
+            context.fillRect(935,30,45,20);
+            context.fillRect(990,15,45,35);
+            create_circle(1070,30,17,5);
+            context.fillStyle = '#6D9AE2';
+            create_circle(1070,30,10,5);
+            context.fillStyle = '#638A5D';
+            context.strokeStyle = '#4D5EA1';
+            context.fillText("TOP",937,47);
+            context.beginPath();
+            context.moveTo(990,30);
+            context.lineTo(1013,35);
+            context.stroke();
+            context.beginPath();
+            context.moveTo(1013,35);
+            context.lineTo(1035,30);
+            context.stroke();/*화면 우측 상단 메뉴 아이콘*/
+
+            var cart_img = new Image();
+            cart_img.src = 'resource/cart.png';
+            create_Image(cart_img,600,230,350,200);/*화면 중앙 카트*/
+            context.fillStyle = '#21E1FF';
+            context.strokeStyle ='#21E1FF';
+            create_circle(450,200,100);/*다오 얼굴*/
+            var dao_head_left_end_point = [{x:400,y:130},{x:400,y:270},],/*시작점, 끝점*/
+                dao_head_left_control_point = [{x:290,y:160},{x:290,y:240},],/*중간 control Point*/
+                dao_head_right_end_point = [{x:500,y:130},{x:500,y:270},],
+                dao_head_right_control_point = [{x:600,y:160},{x:600,y:240},],
+                dao_body_left_end_point = [{x:430,y:300},{x:450,y:400},],
+                dao_body_left_control_point = [{x:400,y:400},{x:400,y:400},],
+                dao_body_right_end_point = [{x:470,y:300},{x:450,y:400},],
+                dao_body_right_control_point = [{x:500,y:400},{x:500,y:400},],
+                dao_face_left_end_point = [{x:430,y:200},{x:460,y:280},],
+                dao_face_left_control_point = [{x:380,y:130},{x:350,y:300},],
+                dao_face_right_end_point = [{x:460,y:200},{x:440,y:280},],
+                dao_face_right_control_point = [{x:510,y:130},{x:550,y:300},],
+                dao_eye_left_end_point = [{x:430,y:205},{x:390,y:200},],
+                dao_eye_left_control_point = [{x:430,y:205},{x:410,y:150},],
+                dao_eye_right_end_point = [{x:460,y:205},{x:500,y:200},],
+                dao_eye_right_control_point = [{x:460,y:205},{x:480,y:150},];
+            create_bezierCurve('#21E1FF',dao_head_left_end_point,dao_head_left_control_point,1);
+            create_bezierCurve('#21E1FF',dao_head_right_end_point,dao_head_right_control_point,1);/*다오 머리*/
+            context.lineWidth = 20;
+            context.strokeStyle ='#DEB2B3';
+            context.lineCap = 'round';
+            context.beginPath();
+            context.moveTo(430,300);
+            context.lineTo(390,350);
+            context.stroke();
+            context.beginPath();
+            context.moveTo(470,300);
+            context.lineTo(510,350);
+            context.stroke();
+            context.fillStyle = 'white';
+            context.strokeStyle ='white';
+            create_circle(390,350,15,20); create_circle(510,350,15,20);/*다오 팔*/
+            context.lineWidth = 20;
+            context.strokeStyle ='#DEB2B3';
+            context.lineCap = 'round';
+            context.beginPath();
+            context.moveTo(430,400);
+            context.lineTo(420,430);
+            context.stroke();
+            context.beginPath();
+            context.moveTo(470,400);
+            context.lineTo(480,430);
+            context.stroke();/*다오 다리*/
+
+            context.fillStyle = '#31F6FF';
+            context.strokeStyle ='white';
+            context.beginPath();
+            context.arc(420,440,20,Math.PI,false);
+            context.fill();
+            context.beginPath();
+            context.arc(480,440,20,Math.PI,false);
+            context.fill();/*다오 발*/
+
+            create_bezierCurve('#21E1FF',dao_body_left_end_point,dao_body_left_control_point,1);
+            create_bezierCurve('#21E1FF',dao_body_right_end_point,dao_body_right_control_point,1);
+            context.fillRect(430,300,40,100);/*다오 몸통*/
+            context.strokeStyle = '#333247';
+            context.lineWidth = 15;
+            context.lineCap = 'round';
+            context.beginPath();
+            context.moveTo(470,300);
+            context.lineTo(420,400);
+            context.stroke();
+            context.strokeStyle = '#536585';
+            context.fillStyle = '#2276DB';
+            create_circle(445,350,15,20);/*다오 밸트*/
+
+            create_bezierCurve('#FFE5D7',dao_face_left_end_point,dao_face_left_control_point,1);
+            create_bezierCurve('#FFE5D7',dao_face_right_end_point,dao_face_right_control_point,1);
+            context.fillStyle ='#FFE5D7';
+            context.fillRect(430,190,30,70);/*다오 얼굴*/
+            context.lineWidth = 15;
+            create_bezierCurve('#3A3346',dao_eye_left_end_point,dao_eye_left_control_point);
+            create_bezierCurve('#3A3346',dao_eye_right_end_point,dao_eye_right_control_point);/*다오 눈썹*/
+            
+            context.lineWidth = 17;
+            context.beginPath();
+            context.moveTo(425,230);
+            context.lineTo(425,260);
+            context.stroke();
+            context.beginPath();
+            context.moveTo(465,230);
+            context.lineTo(465,260);
+            context.stroke();
+            context.fillStyle = 'white';
+            create_circle(427,232,5,1);
+            create_circle(467,232,5,1);
+            context.fillStyle='#F56796';
+            create_circle(400,270,15,1);
+            create_circle(500,270,15,1);/*다오 얼굴 내부*/
+
+            var right_menu_img = new Image(),
+            right_menu_txt = ["상점" ,"이벤트","시즌패스"],
+            right_menu_count = 0;
+            right_menu_img.src = 'resource/rightMenu.png';
+            create_Image(right_menu_img,1000,80,80,300);
+            context.fillStyle='white';
+            context.textAlign = 'center';
+            context.font = '400 15pt Arial';
+            for(var right_menu_index = 220;right_menu_index<420;right_menu_index+=70){
+                context.fillText(right_menu_txt[right_menu_count++],1040,right_menu_index);
+            }
+        };
+
+        function create_canvas_storage(){
+            var storage_background_color = context.createLinearGradient(0,0,canvas.width,0);
+            storage_background_color.addColorStop(0,'#122D57');
+            storage_background_color.addColorStop(0.5,'#42C5FE');
+            storage_background_color.addColorStop(1,'#122D57');
+            context.fillStyle=storage_background_color;
+            context.fillRect(0,0,canvas.width,canvas.height);/*배경 그라데이션 효과*/
+
+            var storage_background_center_end_point = [{x:0,y:canvas.height/2},{x:canvas.width,y:canvas.height/2},],
+                storage_background_center_control_point=[{x:200,y:canvas.height/2-100},{x:900,y:canvas.height/2-100},],
+                center_ellipse_1_end_point =[{x:canvas.width/2,y:250},{x:canvas.width/2+300,y:350},],
+                center_ellipse_1_control_point =[{x:canvas.width/2+150,y:250},{x:canvas.width/2+300,y:300},],
+                center_ellipse_2_end_point =[{x:canvas.width/2+300,y:350},{x:canvas.width/2,y:450},],
+                center_ellipse_2_control_point =[{x:canvas.width/2+300,y:400},{x:canvas.width/2+150,y:450},],
+                center_ellipse_3_end_point =[{x:canvas.width/2,y:450},{x:canvas.width/2-300,y:350},],
+                center_ellipse_3_control_point =[{x:canvas.width/2-150,y:450},{x:canvas.width/2-300,y:400},],
+                center_ellipse_4_end_point =[{x:canvas.width/2-300,y:350},{x:canvas.width/2,y:250},],
+                center_ellipse_4_control_point =[{x:canvas.width/2-300,y:300},{x:canvas.width/2-150,y:250},];
+            context.lineWidth = 15;
+            create_bezierCurve('#ACFFFF',storage_background_center_end_point,storage_background_center_control_point);
+            context.fillStyle ='#6B729C';
+            context.fill();
+            context.fillRect(0,canvas.height/2,canvas.width,canvas.height/2);
+            create_bezierCurve('#E9DEB4',center_ellipse_1_end_point,center_ellipse_1_control_point);
+            create_bezierCurve('#E9DEB4',center_ellipse_2_end_point,center_ellipse_2_control_point);
+            create_bezierCurve('#E9DEB4',center_ellipse_3_end_point,center_ellipse_3_control_point);
+            create_bezierCurve('#E9DEB4',center_ellipse_4_end_point,center_ellipse_4_control_point);/*뒷 배경*/
+            
+            var storage_cart_img = new Image(),
+                storage_menu_count = 0, storage_menu = ["카트","캐릭터","플라잉 펫","펫","엠블럼","아이템","컬렉션"];
+            storage_cart_img.src = 'resource/storageCart.png';
+            create_Image(storage_cart_img,300,160,520,270);/*화면 중앙 카트*/
+        
+            context.fillStyle = '#215A9F';
+            context.fillRect(0,0,200,canvas.height);
+            context.fillStyle = 'white';
+            context.font = '400 15pt Arial';
+            for(var storage_left_menu_i = 50;storage_left_menu_i<canvas.height;storage_left_menu_i+=70){
+                context.lineWidth = 2;
+                context.strokeStyle='white';
+                context.beginPath();
+                context.moveTo(0,storage_left_menu_i);
+                context.lineTo(200,storage_left_menu_i);
+                context.stroke();
+                context.fillText(storage_menu[storage_menu_count++],130,storage_left_menu_i+40);
+            }/*창고 좌측 메뉴*/
+            var cart_status=new Polygon(950,100,50,5,Math.PI*2,'#24C4FE','#1B457E'),
+                cart_status_inside=new Polygon(950,100,37,5,Math.PI*2,'#24C4FE','#24C4FE');
+            drawPolygon(cart_status);
+            drawPolygon(cart_status_inside);
+
+            canvas.onmousedown = function(e){
+                if(e.x>900&&e.y>100&&e.x<1000,e.y<300&&count==2){
+                    var prev_value = cart_status_inside.radius;
+                    cart_status_inside.radius = Math.floor(Math.random()*47);
+                    if(prev_value>cart_status_inside.radius){
+                        alert('카트 능력치가 감소되었습니다.');
+                    }
+                    else 
+                        alert('카트 능력치가 증가했습니다.');
+                    drawPolygon(cart_status);
+                    drawPolygon(cart_status_inside);
+                
+                }
+            }/*클릭시 UI 시각적 변화*/
+            
+            context.fillStyle='white';
+            context.font = '300 12pt Arial';
+            context.fillText("드리프트",950,45);
+            context.fillText("게이지 충전",870,70);
+            context.fillText("부스터 시간",870,140);
+            context.fillText("커브",1000,140);
+            context.fillText("가속도",1020,90);
+            context.fillText("카트 상태 표시 오각형을 클릭해",1000,170);
+            context.fillText("능력치를 변경할 수 있습니다",1000,190);
+            /*카트 상태창*/
+            context.lineCap = 'round';
+            var storage_down_menu_1=new Polygon(1050,450,40,6,Math.PI*2,'#496FB7','#6F86BD'),
+                storage_down_menu_2=new Polygon(965,460,25,6,Math.PI*2,'#496FB7','#6F86BD'),
+                storage_down_menu_3=new Polygon(890,460,25,6,Math.PI*2,'#496FB7','#6F86BD'),
+                storage_down_menu_4=new Polygon(815,460,25,6,Math.PI*2,'#496FB7','#6F86BD');
+            drawPolygon(storage_down_menu_1);
+            drawPolygon(storage_down_menu_2);
+            drawPolygon(storage_down_menu_3);
+            drawPolygon(storage_down_menu_4);
+            var storage_down_menu_ary = ["꾸미기","레벨업","액세서리","카트 목록"],
+                storage_down_menu_count = 0;
+            context.font = '400 15pt Arial';
+            context.textAlign = 'center';
+            context.fillStyle = 'white';
+            for(var storage_down_menu_index=805;storage_down_menu_index<1080;storage_down_menu_index+=80){
+                context.fillText(storage_down_menu_ary[storage_down_menu_count++],storage_down_menu_index,510);
+            }
+            var storage_down_menu_img_1=new Image(),
+                storage_down_menu_img_2=new Image(),
+                storage_down_menu_img_3=new Image(),
+                storage_down_menu_img_4=new Image();
+            storage_down_menu_img_1.src='resource/storageIndex1.png';
+            storage_down_menu_img_2.src='resource/storageIndex2.png';
+            storage_down_menu_img_3.src='resource/storageIndex3.png';
+            storage_down_menu_img_4.src='resource/storageIndex4.png';
+            create_Image(storage_down_menu_img_1,1015,415,70,70);
+            create_Image(storage_down_menu_img_2,950,445,30,30);
+            create_Image(storage_down_menu_img_3,875,445,30,30);
+            create_Image(storage_down_menu_img_4,800,445,30,30);
+            /*창고 하단 메뉴*/
+
+            var arrow_btn=new Polygon(120,25,20,3,Math.PI/2+Math.PI,'#A9F9FA','#124882'),
+                cart_info = new Image();
+            context.lineWidth = 7;
+            drawPolygon(arrow_btn);
+            context.fillStyle='#124882';
+            context.strokeStyle='#A9F9FA';
+            context.lineCap = 'butt';
+            context.beginPath();
+            context.moveTo(130,15);
+            context.lineTo(160,15);
+            context.lineTo(160,35);
+            context.lineTo(130,35);
+            context.stroke();
+            context.fill();
+            context.fillStyle='white';
+            context.font = '500 23pt Arial';
+            context.fillText("카트",200,37);
+            context.font = '700 30pt Arial';
+            context.fillText("사이버 버스트",350,70);
+            context.font = '300 15pt Arial';
+            cart_info.src = 'resource/cartInform.png';
+            create_Image(cart_info,220,70,280,35);
+            context.fillStyle = 'yellow';
+            context.fillText("(4일 23시간)",535,65);
+            context.font = '300 13pt Arial';
+            context.fillStyle = '#A6E5FD';
+            context.fillText("사이버 기술에 의해 새롭게 태어난 버스트,",380,120);
+            context.fillText("강자의 귀환은 붐힐 마을에 파란을 일으킬 거예요.",405,140);
+            /*화면 좌측 상단 카트 정보 UI*/
+            
+            var using_ui = new Polygon(canvas.width/2,500,40,6,Math.PI/2,'#F2C72F','#D86813');
+            drawPolygon(using_ui);
+            context.font = '400 15pt Arial';
+            context.fillStyle = 'white';
+            context.lineWidth = 1;
+            context.strokeStyle = '#F2C72F';
+            context.fillText("사용 중",canvas.width/2,505);
+            context.strokeText("사용 중",canvas.width/2,505);
+            /*화면 하단 사용중 정보*/
+        };
+
+        function create_canvas_gamestart(){
+            var user_id=["코딩꿀잼","HCI","S0ftWare","휴컴인","2016742039","정정현","luckjjh"," "],
+                user_id_count = 0;
+            context.fillStyle='#2A548D';
+            context.fillRect(0,0,canvas.width,canvas.height);
+            /*게임 시작화면 배경*/
+            context.lineJoin='round';
+            context.lineWidth=10;
+            for(var ingame_box_x=150;ingame_box_x<canvas.width-200;ingame_box_x+=210){
+                for(var ingame_box_y=50;ingame_box_y<canvas.height-200;ingame_box_y+=210){
+                    context.fillStyle='#A2D8F9';
+                    context.strokeStyle='#A2D8F9';
+                    context.strokeRect(ingame_box_x,ingame_box_y,190,190);
+                    context.fillRect(ingame_box_x,ingame_box_y,190,190);
+                    context.fillStyle='#2D61A0';
+                    context.font='700 12pt Arial';
+                    context.textAlign='center';
+                    context.fillText(user_id[user_id_count++],ingame_box_x+95,ingame_box_y+15);
+                }
+            }/*user들 들어가는 index*/
+            var user_img_1=new Image(),user_img_2=new Image(),user_img_3=new Image(),
+            user_img_4=new Image(),user_img_5=new Image(),user_img_6=new Image(),user_img_7=new Image();
+            user_img_1.src='resource/user1.png';user_img_2.src='resource/user2.png';
+            user_img_3.src='resource/user3.png';user_img_4.src='resource/user4.png';
+            user_img_5.src='resource/user5.png';user_img_6.src='resource/user6.png';
+            user_img_7.src='resource/user7.png';
+            create_Image(user_img_1,150,50,200,200);
+            create_Image(user_img_2,360,40,200,200);
+            create_Image(user_img_3,570,50,200,200);
+            create_Image(user_img_4,770,50,205,205);
+            create_Image(user_img_5,140,260,205,205);
+            create_Image(user_img_6,355,260,205,205);
+            create_Image(user_img_7,560,250,205,205);
+            var ingame_arrow_btn=new Polygon(120,25,20,3,Math.PI/2+Math.PI,'#9DFEFF','#456EA9');
+            context.lineWidth = 7;
+            drawPolygon(ingame_arrow_btn);
+            context.fillStyle='#456EA9';
+            context.strokeStyle='#9DFEFF';
+            context.lineCap = 'butt';
+            context.beginPath();
+            context.moveTo(130,15);
+            context.lineTo(160,15);
+            context.lineTo(160,35);
+            context.lineTo(130,35);
+            context.stroke();
+            context.fill();
+            context.fillStyle='white';
+            context.font='700 15pt Arial';
+            context.fillText("함께 할래요?",250,30);
+            context.fillStyle='#28AAFF';
+            context.strokeStyle='#C6EEFF';
+            context.fillRect(330,13,20,20);
+            create_circle(343,20,4,6);
+            context.lineWidth=4;
+            context.beginPath();
+            context.moveTo(340,23);
+            context.lineTo(330,35);
+            context.stroke();/*화면 상단 화살표, 방 이름, 돋보기*/
+
+            var ingame_chat_img = new Image();
+            context.fillStyle = '#233C65';
+            context.strokeStyle = 'black';
+            context.fillRect(190,470,200,50);
+            context.strokeRect(140,470,250,50);
+            ingame_chat_img.src = 'resource/chatImg.png';
+            create_Image(ingame_chat_img,141,471,48,48);/*채팅창*/
+
+            var ingame_menu = new Image(),
+                ingame_btn = new Image();
+            ingame_menu.src = 'resource/ingameDownMenu.png';
+            create_Image(ingame_menu,400,455,300,70);
+            context.strokeStyle='#289EFE';
+            context.fillStyle='#289EFE';
+            context.lineJoin = 'round';
+            context.lineWidth = 20;
+            context.strokeRect(720,480,60,35);
+            context.fillRect(720,480,50,30);
+            ingame_btn.src = 'resource/ingameBtnImg.png';
+            create_Image(ingame_btn,720,470,60,50);
+
+            context.strokeRect(810,480,150,35);
+            context.fillRect(810,480,140,30);
+            context.fillStyle='#1A4F9C';
+            context.font='1000 20pt Arial';
+            context.fillText("준비 취소",885,510);/*화면 하단 버튼들*/
+        };
+
+
+
+        /*canvas 구동 관련 메인 구문*/
+
+
+
+        create_canvas_main();
+        function previous_btn_click(){
+            if(count==1){
+                alert("이 canva가 첫번째 canvas 입니다.");
+            }
+            else if(count==2){
+                count--;
+                canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);
+                create_canvas_main();
+            }
+            else if(count==3){
+                count--;
+                canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);
+                create_canvas_storage();
+            }
+                
+        }
+        function next_btn_click(){
+            if(count==3){
+                alert("이 canva가 마지막 canvas 입니다.");
+            }
+            else if(count==2){
+                count++;
+                canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);
+                create_canvas_gamestart();
+            }
+            else if(count==1){
+                count++;
+                canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);
+                create_canvas_storage();
+            }
+        }
+
+        window.addEventListener("keypress",function(e){
+            if(e.keyCode=='49'&&count!=1){
+                count=1;
+                canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);
+                create_canvas_main();
+            }
+            else if(e.keyCode=='50'&&count!=2){
+                count=2;
+                canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);
+                create_canvas_storage();
+            }
+            else if(e.keyCode=='51'&&count!=3){
+                count=3;
+                canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);
+                create_canvas_gamestart();
+            }
+        });
+        
+        /*document.getElementById("chatting").addEventListener("keydown",function(event){
+            if(event.keyCode=='13'){
+               document.getElementById("send_btn").click();
+            }
+        });작동안됨*/
+        function chat_btn_click(){
+            var inputData=document.getElementById("chatting").value,
+                chat_input_1 = new ChattingBox(220,430,'700 15pt Arial',inputData),
+                chat_input_3 = new ChattingBox(295,500,'700 15pt Arial',inputData);
+            if(count==1){
+                chat_input_1.removeChat(context);
+                chat_input_1.sendChat(context);
+                sleep(2000).then(()=>chat_input_1.responseChat(context));
+            }   
+            else if(count==2){
+                alert("채팅을 지원하지 않는 canvas 입니다.")
+            }  
+            else{
+                chat_input_3.removeChat(context);
+                chat_input_3.sendChat(context);
+                sleep(2000).then(()=>chat_input_3.responseChat(context));
+            }
+        }    
+        
+    </script>
+    
+</body>
+</html>
